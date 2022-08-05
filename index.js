@@ -1,6 +1,8 @@
 const { ApolloServer, gql } = require("apollo-server");
-const { default: axios } = require("axios");
 const { RESTDataSource } = require("apollo-datasource-rest");
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
 
 class jsonPlaceAPI extends RESTDataSource {
   constructor() {
@@ -48,8 +50,8 @@ const typeDefs = gql`
 const resolvers = {
   Query: {
     hello: (_, args) => `Hello, ${args.name}!`,
-    users: async (_, __, { dataSources }) => {
-      return dataSources.jsonPlaceAPI.getUsers();
+    users: async () => {
+      return prisma.user.findMany();
     },
     user: async (_, args, { dataSources }) => {
       return dataSources.jsonPlaceAPI.getUser(args.id);
