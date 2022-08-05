@@ -2,8 +2,6 @@ const { ApolloServer, gql } = require("apollo-server");
 const { RESTDataSource } = require("apollo-datasource-rest");
 const { PrismaClient } = require("@prisma/client");
 
-const prisma = new PrismaClient();
-
 class jsonPlaceAPI extends RESTDataSource {
   constructor() {
     super();
@@ -49,37 +47,38 @@ const typeDefs = gql`
   type Mutation {
     createUser(name: String!, email: String!): User
     updateUser(id: Int!, name: String!): User
+    deleteUser(id: Int!): User
   }
 `;
 
 const resolvers = {
   Query: {
     hello: (_, args) => `Hello, ${args.name}!`,
-    users: async () => {
-      return prisma.user.findMany();
+    users: async (_, __, { dataSources }) => {
+      return dataSources.sqlite.user.findMany();
     },
-    user: async (_, args) => {
-      return prisma.user.findUnique({
+    user: async (_, args, { dataSources }) => {
+      return dataSources.sqlite.user.findUnique({
         where: {
           id: parseInt(args.id),
         },
       });
     },
-    posts: async () => {
-      return prisma.post.findMany();
+    posts: async (_, __, { dataSources }) => {
+      return dataSources.sqlite.post.findMany();
     },
   },
   Mutation: {
-    createUser: (_, args) => {
-      return prisma.user.create({
+    createUser: (_, args, { dataSources }) => {
+      return dataSources.sqlite.user.create({
         data: {
           name: args.name,
           email: args.email,
         },
       });
     },
-    updateUser: (_, args) => {
-      return prisma.user.update({
+    updateUser: (_, args, { dataSources }) => {
+      return dataSources.sqlite.user.update({
         where: {
           id: args.id,
         },
@@ -88,12 +87,19 @@ const resolvers = {
         },
       });
     },
+    deleteUser: (_, args, { dataSources }) => {
+      return dataSources.sqlite.user.delete({
+        where: {
+          id: args.id,
+        },
+      });
+    },
   },
   User: {
-    myPosts: async (parent) => {
-      return prisma.post.findUnique({
+    myPosts: async (parent, __, { dataSources }) => {
+      return dataSources.sqlite.post.findMany({
         where: {
-          id: parseInt(parent.id),
+          userId: parent.id,
         },
       });
     },
@@ -106,6 +112,7 @@ const server = new ApolloServer({
   dataSources: () => {
     return {
       jsonPlaceAPI: new jsonPlaceAPI(),
+      sqlite: new PrismaClient(),
     };
   },
 });
