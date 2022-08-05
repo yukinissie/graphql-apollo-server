@@ -45,6 +45,10 @@ const typeDefs = gql`
     user(id: ID!): User
     posts: [Post]
   }
+
+  type Mutation {
+    createUser(name: String!, email: String!): User
+  }
 `;
 
 const resolvers = {
@@ -53,18 +57,34 @@ const resolvers = {
     users: async () => {
       return prisma.user.findMany();
     },
-    user: async (_, args, { dataSources }) => {
-      return dataSources.jsonPlaceAPI.getUser(args.id);
+    user: async (_, args) => {
+      return prisma.user.findUnique({
+        where: {
+          id: parseInt(args.id),
+        },
+      });
     },
-    posts: async (_, __, { dataSources }) => {
-      return dataSources.jsonPlaceAPI.getPosts();
+    posts: async () => {
+      return prisma.post.findMany();
+    },
+  },
+  Mutation: {
+    createUser: (_, args) => {
+      return prisma.user.create({
+        data: {
+          name: args.name,
+          email: args.email,
+        },
+      });
     },
   },
   User: {
-    myPosts: async (parent, __, { dataSources }) => {
-      const posts = await dataSources.jsonPlaceAPI.getPosts();
-      const myPosts = posts.filter((post) => post.userId == parent.id);
-      return myPosts;
+    myPosts: async (parent) => {
+      return prisma.post.findUnique({
+        where: {
+          id: parseInt(parent.id),
+        },
+      });
     },
   },
 };
